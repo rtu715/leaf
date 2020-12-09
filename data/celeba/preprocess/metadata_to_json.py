@@ -2,6 +2,7 @@ import json
 import numpy as np
 import os
 
+from PIL import Image
 
 TARGET_NAME = 'Smiling'
 parent_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -76,7 +77,8 @@ def build_json_format(celebrities, targets):
 
 	celeb_keys = [c for c in celebrities]
 	num_samples = [len(celebrities[c]) for c in celeb_keys]
-	data = {c: {'x': celebrities[c], 'y': targets[c]} for c in celebrities}
+
+	data = {c: {'x': process_x(celebrities[c]), 'y': targets[c]} for c in celebrities}
 
 	all_data['users'] = celeb_keys
 	all_data['num_samples'] = num_samples
@@ -98,6 +100,25 @@ def write_json(json_data):
 		json.dump(json_data, outfile)
 
 
+def process_x(raw_x_batch):
+    x_batch = [load_image(i) for i in raw_x_batch]
+    #x_batch = np.array(x_batch)
+    return x_batch
+
+def process_y(raw_y_batch):
+    return raw_y_batch
+
+def load_image(img_name):
+    IMAGE_SIZE = 84
+    IMAGES_DIR = os.path.join(parent_path, 'data', 'raw', 'img_align_celeba')
+    img = Image.open(os.path.join(IMAGES_DIR, img_name))
+    img = img.resize((IMAGE_SIZE, IMAGE_SIZE)).convert('RGB')
+    img = np.array(img) / 255.0
+    img = img.tolist()
+    
+    return img
+
+
 def main():
 	identities, attributes = get_metadata()
 	celebrities = get_celebrities_and_images(identities)
@@ -105,6 +126,8 @@ def main():
 
 	json_data = build_json_format(celebrities, targets)
 	write_json(json_data)
+
+
 
 
 if __name__ == '__main__':
