@@ -13,6 +13,7 @@ if [ ! -f "data/raw/identity_CelebA.txt" ]; then
 fi
 
 if [ ! -d "data/all_data" ] || [ ! "$(ls -A data/all_data)" ]; then
+	mkdir data/all_data
 	echo "Preprocessing raw data"
 	python preprocess/metadata_to_json.py
 fi
