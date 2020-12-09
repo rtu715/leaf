@@ -1,12 +1,16 @@
+from __future__ import division
 import json
+import math
 import numpy as np
 import os
+import sys
 
 from PIL import Image
 
 TARGET_NAME = 'Smiling'
 parent_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
+MAX_CELEBS = 100 
 
 def get_metadata():
 	f_identities = open(os.path.join(
@@ -71,21 +75,7 @@ def get_celebrities_and_target(celebrities, attributes, attribute_name=TARGET_NA
 
 	return celeb_attributes
 
-
-def build_json_format(celebrities, targets):
-	all_data = {}
-
-	celeb_keys = [c for c in celebrities]
-	num_samples = [len(celebrities[c]) for c in celeb_keys]
-
-	data = {c: {'x': process_x(celebrities[c]), 'y': targets[c]} for c in celebrities}
-
-	all_data['users'] = celeb_keys
-	all_data['num_samples'] = num_samples
-	all_data['user_data'] = data
-	return all_data
-
-
+'''
 def write_json(json_data):
 	file_name = 'all_data.json'
 	dir_path = os.path.join(parent_path, 'data', 'all_data')
@@ -98,8 +88,7 @@ def write_json(json_data):
 	print('writing {}'.format(file_name))
 	with open(file_path, 'w') as outfile:
 		json.dump(json_data, outfile)
-
-
+'''
 def process_x(raw_x_batch):
     x_batch = [load_image(i) for i in raw_x_batch]
     #x_batch = np.array(x_batch)
@@ -109,14 +98,62 @@ def process_y(raw_y_batch):
     return raw_y_batch
 
 def load_image(img_name):
-    IMAGE_SIZE = 84
+    IMAGE_SIZE = 28
     IMAGES_DIR = os.path.join(parent_path, 'data', 'raw', 'img_align_celeba')
     img = Image.open(os.path.join(IMAGES_DIR, img_name))
-    img = img.resize((IMAGE_SIZE, IMAGE_SIZE)).convert('RGB')
+    img = img.convert('RGB')
+    img.thumbnail(IMAGE_SIZE, Image.AnTIALIAS)
     img = np.array(img) / 255.0
     img = img.tolist()
     
     return img
+
+def build_json(celebrities, targets):
+	users = []
+	num_samples = []
+	user_data = {}
+
+
+
+	celeb_keys = [c for c in celebrities]
+	num_json = int(math.ceil(len(celeb_keys) / MAX_CELEBS))
+	#num_samples = [len(celebrities[c]) for c in celeb_keys]
+
+	writer_count = 0
+	json_index = 0
+	for c in celeb_keys:
+		users.append(c)
+		num_samples.append(len(celebrities[c]))
+		user_data[c] = {'x': process_x(celebrities[c]), 'y':targets[c]}
+
+		writer_count += 1
+		if writer_count == MAX_WRITERS:
+			all_data = {}
+			all_data['users'] = users
+			all_data['num_samples'] = num_samples
+			all_data['user_data'] = user_data
+
+			file_name = 'all_data%d.json' % json_index
+			file_path = os.path.join(parent_path, 'data', 'all_data', file_name)
+
+			print('writing %s out of %s files' % (file_name, str(num_json)))
+
+			with open(file_path, 'w') as outfile:
+				json.dump(all_data, outfile)
+
+			writer_count = 0 
+			json_index += 1
+
+			users[:] = []
+			num_samples[:] = []
+			user_data.clear()
+
+	return 
+
+
+
+
+
 
 
 def main():
@@ -124,8 +161,8 @@ def main():
 	celebrities = get_celebrities_and_images(identities)
 	targets = get_celebrities_and_target(celebrities, attributes)
 
-	json_data = build_json_format(celebrities, targets)
-	write_json(json_data)
+	json_data = build_json(celebrities, targets)
+	#write_json(json_data)
 
 
 
